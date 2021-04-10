@@ -1,10 +1,13 @@
-# CS6381 Assignment2
+# CS6381 Assignment 3
 
 ## Overview
-In this assignment we will build upon the PUB/SUB middleware from Assignment 1. In order to create a more AVAILABLE system we have used Zookeeper impliment broker redundancy through the use of leader elections.
+In this assignment we will build upon the PUB/SUB middleware from Assignment 2. 
+We support ownership strength for fidelity in publishing and acquisition of recent events through message buffers.
+With ownership strength, information from only the highest ownership strength publisher gets relayed to the subscriber.
+As for the the history quality of service, we will require that last N samples of information published on a topic be preserved in a sliding window fashion.
 
 | Simple Broker Latency                                                                                                    | Complex Broker Latency                                                                                                     | Simple Flooding Latency                                                                                                      | Complex Flooding Latency                                                                                                       |
-|--------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+|--------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
 | ![simple_broker](https://github.com/edmasters/single_broker_pub_sub/blob/automated-local-host/results/simple_broker.png) | ![complex_broker](https://github.com/edmasters/single_broker_pub_sub/blob/automated-local-host/results/complex_broker.png) | ![simple flooding](https://github.com/edmasters/single_broker_pub_sub/blob/automated-local-host/results/simple_flooding.png) | ![complex flooding](https://github.com/edmasters/single_broker_pub_sub/blob/automated-local-host/results/complex_flooding.png) |
 
 ## Manual Installation
