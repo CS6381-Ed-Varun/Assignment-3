@@ -20,8 +20,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2b9bb165-d243-48c8-84be-9568e3aba8fa" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/Assignment2.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Assignment2.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/middleware/publisher.py" beforeDir="false" afterPath="$PROJECT_DIR$/middleware/publisher.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,7 +59,7 @@
     <property name="node.js.path.for.package.tslint" value="project" />
     <property name="node.js.selected.package.eslint" value="(autodetect)" />
     <property name="node.js.selected.package.tslint" value="(autodetect)" />
-    <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PythonContentEntriesConfigurable" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -110,11 +111,12 @@
       <screen x="0" y="23" width="1280" height="717" />
     </state>
     <state x="240" y="29" key="#Plugins/0.23.1280.717@0.23.1280.717" timestamp="1617185828164" />
-    <state x="141" y="23" width="997" height="716" key="SettingsEditor" timestamp="1617185361071">
-      <screen x="0" y="23" width="1280" height="717" />
+    <state x="141" y="23" width="997" height="722" key="SettingsEditor" timestamp="1618087830996">
+      <screen x="0" y="23" width="1280" height="722" />
     </state>
     <state x="141" y="23" width="997" height="716" key="SettingsEditor/0.23.1280.716@0.23.1280.716" timestamp="1617176459157" />
     <state x="141" y="23" key="SettingsEditor/0.23.1280.717@0.23.1280.717" timestamp="1617185361071" />
+    <state x="141" y="23" width="997" height="722" key="SettingsEditor/0.23.1280.722@0.23.1280.722" timestamp="1618087830996" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
