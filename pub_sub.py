@@ -12,11 +12,12 @@ logging.basicConfig()
 
 class subscriber(Thread):
 
-	def __init__(self, topic, flood, broker_add):
+	def __init__(self, topic, flood, broker_add, hist_port):
 		super().__init__()
 		self.topic = topic
 		self.flood = flood
 		self.joined = True
+		self.port = hist_port
 		
 		#connect to the socket like normal. self.sub = our sub socket
 		self.context = zmq.Context()
@@ -30,6 +31,17 @@ class subscriber(Thread):
 		#where zk is hosted - change local host part as needed and port 2181 comes from the config file
 		self.zk_object = KazooClient(hosts='127.0.0.1:2181')
 		self.zk_object.start()
+
+		if self.port:
+			self.hist_path = "/history/"
+			self.hist_node = self.hist_path + "node"
+			address = self.broker_add + "," + self.port
+			if self.zk_object.exists(self.hist_node):
+				pass
+			else:
+				self.zk_object.ensure_path(self.hist_path)
+				self.zk_object.create(self.hist_node, ephemeral =True)
+			self.zk_object.set(self.hist_node, address)
 		
 		#flooding connection
 		if self.flood == True:
