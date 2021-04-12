@@ -167,11 +167,11 @@ class broker:
 				self.newSub = False
 				print("--- Sent HISTORY ---")
 			else:
-				self.frontend.send_string(("%s" % (topic_msg))
+				self.frontend.send_string("%s" % (topic_msg))
 			
 		if self.frontend in data: #a subscriber comes here
 			string = self.frontend.recv()
-			self.backend.send_string("%s" % string)
+			self.backend.send_string("%s" % (string))
 
 	def schedule(self, info, string):
 		[strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message] = info
