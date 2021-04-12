@@ -1,4 +1,5 @@
 import sys
+import os
 import zmq
 from threading import Thread
 import random
@@ -41,7 +42,7 @@ class subscriber(Thread):
 			else:
 				self.zk_object.ensure_path(self.hist_path)
 				self.zk_object.create(self.hist_node, ephemeral =True)
-			self.zk_object.set(self.hist_node, address)
+			self.zk_object.set(self.hist_node, to_bytes(address))
 		
 		#flooding connection
 		if self.flood == True:
