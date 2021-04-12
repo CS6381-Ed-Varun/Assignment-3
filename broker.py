@@ -64,8 +64,8 @@ class broker:
 
 		#use port #'s from the leader to finish connecting the proxy'
 		addr = self.leader.split(",") 
-		self.frontend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
-		self.backend.bind("tcp://127.0.0.1:" + addr[1])
+&&&&		self.frontend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
+&&&&		self.backend.bind("tcp://127.0.0.1:" + addr[1])
 
 		#set-up znode for the newly minted leader
 		self.watch_dir = self.path + self.leader 
@@ -80,6 +80,20 @@ class broker:
 
 		#setting
 		self.zk_object.set(self.leader_node, to_bytes(self.leader)) #setting the port info into the leader znode for pubs + subs
+		self.history_node = '/history/node'
+
+		self.threading = threading.Thread(target=self.background_input)
+        self.threading.daemon = True
+        self.threading.start()
+
+    def history(self, hist_list, index, history, message):
+    	if len(hist_list[index]) < history:
+    		hist_list.append(message)
+    	else:
+    		hist_list[index].pop(0)
+    		hist_list[index].append(message)
+    	return hist_list
+
 
 	def device(self):
 		#start the proxy device /broker that forwards messages. same as Assignment 1
