@@ -3,6 +3,7 @@ import os
 import zmq
 from threading import Thread
 import random
+from ansible.module_utils._text import to_bytes
 import time
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
@@ -36,13 +37,13 @@ class subscriber(Thread):
 		if self.port:
 			self.hist_path = "/history/"
 			self.hist_node = self.hist_path + "node"
-			address = self.broker + "," + self.port
+			adr = self.broker + "," + self.port
 			if self.zk_object.exists(self.hist_node):
 				pass
 			else:
 				self.zk_object.ensure_path(self.hist_path)
 				self.zk_object.create(self.hist_node, ephemeral =True)
-			self.zk_object.set(self.hist_node, to_bytes(address))
+			self.zk_object.set(self.hist_node, to_bytes(adr))
 		
 		#flooding connection
 		if self.flood == True:
