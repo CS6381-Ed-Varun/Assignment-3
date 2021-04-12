@@ -139,7 +139,7 @@ class broker:
 			message = []
 			prior_message = []
 
-			full_data = [strength, prior_strength, count, hist_list. strength_list, topic_index, message, prior_message]
+			full_data = [strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message]
 			self.topic_q.append(full_data)
 			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
 			self.topic_index +=1
@@ -171,7 +171,50 @@ class broker:
             string = self.frontend.recv()
             self.backend.send_multipart(string)
 
+    def schedule(self, info, string):
+    	[strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message] = info
 
+    	num = 20
+        content = string
+        topic, messagedata, new_strength, history = string.split()
+
+        if strength not in strength_list:
+            strengh_list.append(strength)
+            hist_list.append([])
+            hist_list = self.hist_list(hist_list, topic_index, history, string)
+            topic_index += 1 # the actual size of the publishers
+        else:
+            topic_ind = strengh_vec.index(strength)
+            hist_list = self.hist_list(hist_list, topic_ind, history, string)
+
+        if new_strength > strength:
+            prior_strength = strength
+            strength = new_strength
+            prior_message = message
+            message = string
+            count = 0
+        elif new_strength == strength:
+            message = string
+            count = 0
+        else:
+            count +=1
+            if count >= num:
+                strength = prior_strength
+                message = prior_message
+                count = 0
+        info[0] = strength
+        info[1] = prior_strength
+        info[2] = count
+        info[3] = hist_list
+        info[4] = strength_list
+        info[5] = topic_index
+        info[6] = prior_message
+        info[7] = message
+
+        hist_index = strength_list.index(strength)
+        hist_msg = hist_list[hist_index]
+
+        return message, hist_msg, new_strength, strength_list
 
 	#watch self z-node and re-elect + restart if needed
 	def monitor(self):
