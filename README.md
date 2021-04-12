@@ -1,7 +1,7 @@
 # CS6381 Assignment2
 
 ## Overview
-In this assignment we will build upon the PUB/SUB middleware from Assignment 1. In order to create a more AVAILABLE system we have used Zookeeper impliment broker redundancy through the use of leader elections.
+In this assignment we will build upon the middleware from Assignment 2. In order to create a system with topic history and strength of ownership, we have used Zookeeper and a more dynamic broker to send history to new_subs and send messages with the highest strength of ownership.
 
 | Simple Broker Latency                                                                                                    | Complex Broker Latency                                                                                                     | Simple Flooding Latency                                                                                                      | Complex Flooding Latency                                                                                                       |
 |--------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
