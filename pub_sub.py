@@ -44,21 +44,20 @@ class subscriber(Thread):
 				self.zk_object.ensure_path(self.hist_path)
 				self.zk_object.create(self.hist_node, ephemeral =True)
 			self.zk_object.set(self.hist_node, to_bytes(adr))
-		
-		#flooding connection
-		if self.flood == True:
-			for i in range(1,6):
-				port = str(5558 + i)
-				self.sub.connect("tcp://127.0.0.1:" + port)
-		#connecting tp the broker using zookeeper node on leader broker
+			self.sub.connect("tcp://127.0.0.1:" + self.port)
 		else:
 			data, stat = self.zk_object.get(self.path) #get port #'s from the leader's zk node
 			data = str(data) 
 			addr = data.split(",")  #type casting since path is bytes and strings are needed for connect
 			addr[0] = addr[0][2:]   #removing a ' from the byte -> string cast
-			print("tcp://" + self.broker + ":" + addr[0])	
-			self.sub.connect("tcp://" + self.broker + ":" + addr[0]) #connecting to the broker
-
+			print("tcp://" + self.broker + ":" + addr[1])	
+			self.sub.connect("tcp://" + self.broker + ":" + addr[1]) #connecting to the broker
+	
+		#flooding connection
+		if self.flood == True:
+			for i in range(1,6):
+				port = str(5558 + i)
+				self.sub.connect("tcp://127.0.0.1:" + port)
 	def run(self):
 		print('starting sub ' + self.topic)
 		while self.joined:
@@ -78,12 +77,12 @@ class subscriber(Thread):
 						data, stat = self.zk_object.get(self.path)
 						data = str(data)
 						addr = data.split(",") #same type casting as above for bytes -> string
-						addr[0] = addr[0][2:]
-						self.sub.connect("tcp://" + self.broker + ":" + addr[0])
+						addr[1] = addr[1][:-1]
+						self.sub.connect("tcp://" + self.broker + ":" + addr[1])
 
 			string = self.sub.recv()
-			topic, messagedata = string.split()
-			print (topic, messagedata)
+			data_points = string.split()
+			print (string)
 			
 	#for leaving 
 	def close(self):
@@ -118,14 +117,12 @@ class publisher(Thread):
 			data = str(data) #casting from bytes -> string 
 			addr = data.split(",") 
 			addr[1] = addr[1][:-1] #getting the xpub port and removing the " b' " from casting from byte to string
-			print("tcp://" + self.broker + ":" + addr[1])
-			self.pub.connect("tcp://" + self.broker + ":" + addr[1])
-
-
+			print("tcp://" + self.broker + ":" + addr[0])
+			self.pub.connect("tcp://" + self.broker + ":" + addr[0])
 
 	def run(self):
 		print('starting publisher ' + self.topic)
-		history = 20
+		history = 5
 		#select a stock
 		while self.joined:
 			#set-up the znode watch to see if a broker goes down
@@ -144,8 +141,8 @@ class publisher(Thread):
 						data, stat = self.zk_object.get(self.path)
 						data = str(data)
 						addr = data.split(",")
-						addr[1] = addr[1][:-1]
-						self.pub.connect("tcp://" + self.broker + ":" + addr[1])
+						addr[0] = addr[0][2:]
+						self.pub.connect("tcp://" + self.broker + ":" + addr[0])
 
 			#generate a random price
 			price = str(random.randrange(20, 60))
@@ -225,29 +222,12 @@ class listener(Thread):
 #initializing the individual pubs, sub, and listener
 def main():
        
-	s1 = subscriber('MSFT', False, '127.0.0.1', '5001')
+	s1 = subscriber('MSFT', False, '127.0.0.1', '')
 	s1.start()
-
-	s2 = subscriber('AAPL', False, '127.0.0.1', '5001')
-	s2.start()
-
-	s3 = subscriber('IBM', False, '127.0.0.1', '5001')
-	s3.start()
 	
-	#we may want to pre-set the stock in a refactor since we'll need a known topic for Assignment 3
-	p1 = publisher(1, False, 'MSFT', '127.0.0.1',1)
+	p1 = publisher(1, False, 'MSFT', '127.0.0.1', 1)
 	p1.start()
 
-	p2 = publisher(2, False, 'AAPL', '127.0.0.1',4)
-	p2.start()
-
-	p3 = publisher(3, False, 'IBM', '127.0.0.1',2)
-	p3.start()
-
-	p3.close()
-	
-	p4 = publisher(2, False, 'AAPL', '127.0.0.1',2)
-	p4.start()
 	
 if __name__ == "__main__":
     main()
