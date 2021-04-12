@@ -131,43 +131,43 @@ class broker:
 			string = self.backend.recv()
 			topic, messagedata, strength, history = string.split()
 
-		if topic not in self.tickers:
-			self.tickers.append(topic)
-			strength = 0
-			prior_strength = 0
-			count = 0
-			hist_list = []
-			strength_list = []
-			topic_index = 0
-			message = []
-			prior_message = []
+			if topic not in self.tickers:
+				self.tickers.append(topic)
+				strength = 0
+				prior_strength = 0
+				count = 0
+				hist_list = []
+				strength_list = []
+				topic_index = 0
+				message = []
+				prior_message = []
 
-			full_data = [strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message]
-			self.topic_q.append(full_data)
-			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
-			self.topic_index +=1
-		else:
-			topic_ind = self.tickers.index(topic)
-			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
-			
-		if self.newSub: #handling hist for new sub
-			ctx = zmq.Context()
-			pub = ctx.socket(zmq.PUB)
-			pub.bind(self.sub_url)
-			if ownership == max(strength_list):
-				cur_index = strength_list.index(strength)
-				for i in range(len(hist_list)):
-					pub.send_multipart (histry_msg[i])
-					time.sleep(0.1)
-			pub.unbind(self.sub_url)
-			pub.close()
-			ctx.term()
-			general_addr = "tcp://*:" + self.sub_port
-			self.frontend.bind(general_addr)
-			self.newSub = False
-			print("--- Sent HISTORY ---")
-		else:
-			self.frontend.send_multipart(topic_msg) 
+				full_data = [strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message]
+				self.topic_q.append(full_data)
+				topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
+				self.topic_index +=1
+			else:
+				topic_ind = self.tickers.index(topic)
+				topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
+
+			if self.newSub: #handling hist for new sub
+				ctx = zmq.Context()
+				pub = ctx.socket(zmq.PUB)
+				pub.bind(self.sub_url)
+				if ownership == max(strength_list):
+					cur_index = strength_list.index(strength)
+					for i in range(len(hist_list)):
+						pub.send_multipart (histry_msg[i])
+						time.sleep(0.1)
+				pub.unbind(self.sub_url)
+				pub.close()
+				ctx.term()
+				general_addr = "tcp://*:" + self.sub_port
+				self.frontend.bind(general_addr)
+				self.newSub = False
+				print("--- Sent HISTORY ---")
+			else:
+				self.frontend.send_multipart(topic_msg) 
 			
 		if self.frontend in data: #a subscriber comes here
 			string = self.frontend.recv()
