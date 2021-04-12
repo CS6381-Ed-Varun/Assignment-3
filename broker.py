@@ -22,16 +22,16 @@ class broker:
 		self.backend = self.context.socket(zmq.XSUB)
 
 		self.sub_url = 0
-        self.sub_port = 0
-        self.newSub = False 
+        	self.sub_port = 0
+        	self.newSub = False 
 
-        self.poller = zmq.Poller ()
-        self.poller.register(self.backend ,zmq.POLLIN)
-        self.poller.register(self.frontend, zmq.POLLIN)
+        	self.poller = zmq.Poller ()
+        	self.poller.register(self.backend ,zmq.POLLIN)
+        	self.poller.register(self.frontend, zmq.POLLIN)
 
-        self.topic_q = [] #content queue for tickers
-        self.topic_index = 0
-        self.tickers = [] #list of tickers
+        	self.topic_q = [] #content queue for tickers
+        	self.topic_index = 0
+        	self.tickers = [] #list of tickers
 
 		#Connecting to zookeeper - 2181 from config, ip should/can be changed
 		self.zk_object = KazooClient(hosts='127.0.0.1:2181')
