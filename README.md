@@ -1,4 +1,4 @@
-# CS6381 Assignment2
+# CS6381 Assignment 3
 
 ## Overview
 In this assignment we will build upon the middleware from Assignment 2. In order to create a system with topic history and strength of ownership, we have used Zookeeper and a more dynamic broker to send history to new_subs and send messages with the highest strength of ownership.
