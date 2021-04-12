@@ -49,9 +49,9 @@ class subscriber(Thread):
 			data, stat = self.zk_object.get(self.path) #get port #'s from the leader's zk node
 			data = str(data) 
 			addr = data.split(",")  #type casting since path is bytes and strings are needed for connect
-			addr[0] = addr[0][2:]   #removing a ' from the byte -> string cast
-			print("tcp://" + self.broker + ":" + addr[0])	
-			self.sub.connect("tcp://" + self.broker + ":" + addr[0]) #connecting to the broker
+			addr[1] = addr[1][:-1]   #removing a ' from the byte -> string cast
+			print("tcp://" + self.broker + ":" + addr[1])	
+			self.sub.connect("tcp://" + self.broker + ":" + addr[1]) #connecting to the broker
 	
 		#flooding connection
 		if self.flood == True:
@@ -116,7 +116,7 @@ class publisher(Thread):
 			data, stat = self.zk_object.get(self.path)
 			data = str(data) #casting from bytes -> string 
 			addr = data.split(",") 
-			addr[1] = addr[1][:-1] #getting the xpub port and removing the " b' " from casting from byte to string
+			addr[0] = addr[0][2:] #getting the xpub port and removing the " b' " from casting from byte to string
 			print("tcp://" + self.broker + ":" + addr[0])
 			self.pub.connect("tcp://" + self.broker + ":" + addr[0])
 
