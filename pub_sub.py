@@ -222,28 +222,31 @@ class listener(Thread):
 			
 #initializing the individual pubs, sub, and listener
 def main():
-        
-	s1 = subscriber('MSFT', False, '127.0.0.1')
+       
+	s1 = subscriber('MSFT', False, '127.0.0.1', '5001')
 	s1.start()
 
-	s2 = subscriber('AAPL', False, '127.0.0.1')
+	s2 = subscriber('AAPL', False, '127.0.0.1', '5001')
 	s2.start()
 
-	s3 = subscriber('IBM', False, '127.0.0.1')
+	s3 = subscriber('IBM', False, '127.0.0.1', '5001')
 	s3.start()
 	
 	#we may want to pre-set the stock in a refactor since we'll need a known topic for Assignment 3
-	p1 = publisher(1, False, 'MSFT', '127.0.0.1')
+	p1 = publisher(1, False, 'MSFT', '127.0.0.1',1)
 	p1.start()
 
-	p2 = publisher(2, False, 'AAPL', '127.0.0.1')
+	p2 = publisher(2, False, 'AAPL', '127.0.0.1',4)
 	p2.start()
 
-	p3 = publisher(3, False, 'IBM', '127.0.0.1')
+	p3 = publisher(3, False, 'IBM', '127.0.0.1',2)
 	p3.start()
 
 	p3.close()
-
+	
+	p4 = publisher(2, False, 'AAPL', '127.0.0.1',2)
+	p4.start()
+	
 if __name__ == "__main__":
     main()
 
