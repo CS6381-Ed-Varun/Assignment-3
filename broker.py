@@ -153,7 +153,7 @@ class broker:
                 pub = ctx.socket(zmq.PUB)
                 pub.bind(self.sub_url)
                 if ownership == max(strength_list):
-                    cur_index = strengh_vec.index(strength)
+                    cur_index = strength_list.index(strength)
                     for i in range(len(hist_list)):
                         pub.send_multipart (histry_msg[i])
                         time.sleep(0.1)
@@ -179,12 +179,12 @@ class broker:
         topic, messagedata, new_strength, history = string.split()
 
         if strength not in strength_list:
-            strengh_list.append(strength)
+            strength_list.append(strength)
             hist_list.append([])
             hist_list = self.hist_list(hist_list, topic_index, history, string)
             topic_index += 1 # the actual size of the publishers
         else:
-            topic_ind = strengh_vec.index(strength)
+            topic_ind = strength_list.index(strength)
             hist_list = self.hist_list(hist_list, topic_ind, history, string)
 
         if new_strength > strength:
