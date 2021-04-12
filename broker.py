@@ -245,7 +245,7 @@ class broker:
 						self.frontend.bind("tcp://127.0.0.1:" + addr[0])
 						self.backend.bind("tcp://127.0.0.1:" + addr[1])
 			# starts broker
-			self.election.run(self.device)
+			self.election.run(self.send)
 
 if __name__ == "__main__":
 	broker = broker()
