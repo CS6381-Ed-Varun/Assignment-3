@@ -21,7 +21,7 @@ class Subscriber:
         self.topic = topic
         self.flood = flood
         self.context = zmq.Context()
-
+        self.sub = self.context.socket(zmq.SUB)
         self.path = '/leader/node'
         self.zk_object = KazooClient(hosts='127.0.0.1:2181') 
         self.zk_object.start()
@@ -88,7 +88,7 @@ class Subscriber:
             pub_time = float(pub_time)
             time_diff = time.time() - pub_time
             print ("The time difference is: ", time_diff)
-            print (string)
+            print (topic + " : " +price)
 
     def close(self):
         self.sub.close(0)

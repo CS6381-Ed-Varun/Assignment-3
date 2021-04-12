@@ -68,7 +68,7 @@ class Publisher:
 
             price = str(random.randrange(20, 60))
             pub_timestamp = time.time()
-            self.pub.send_string("%s %i %i %i %i" % (self.topic, price, self.strength, history, pub_timestamp))
+            self.pub.send_string("%s %s %i %i %i" % (self.topic, price, self.strength, history, pub_timestamp))
             time.sleep(1) 
 
     def close(self):
