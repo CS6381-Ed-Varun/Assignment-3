@@ -104,8 +104,8 @@ class broker:
 		while True:
 			new_input = raw_input()
 			if new_input == "x" or new_input == "X":
-                		@self.zk_object.DataWatch(self.history_node)
-			    	def watch_node(data, stat, event):
+				@self.zk_object.DataWatch(self.history_node)
+				def watch_node(data, stat, event):
 					if event == None: 
 						data, stat = self.zk_object.get(self.history_node)
 						print("new sub")
