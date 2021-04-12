@@ -109,7 +109,7 @@ class broker:
 					if event == None: 
 						data, stat = self.zk_object.get(self.history_node)
 						print("new sub")
-				    		address = data.split(",")
+						address = data.split(",")
 						pub_addr = "tcp://127.0.0.1:" + address[1]
 						self.sub_url = pub_addr
 						self.sub_port = address[1]
