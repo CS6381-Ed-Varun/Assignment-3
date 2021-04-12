@@ -21,6 +21,9 @@ class broker:
 		self.frontend = self.context.socket(zmq.XPUB)
 		self.backend = self.context.socket(zmq.XSUB)
 
+        self.sub_port = 0
+        self.newSub = False 
+
 		#Connecting to zookeeper - 2181 from config, ip should/can be changed
 		self.zk_object = KazooClient(hosts='127.0.0.1:2181')
 		self.zk_object.start()
@@ -84,7 +87,22 @@ class broker:
 
 		self.threading = threading.Thread(target=self.background_input)
         self.threading.daemon = True
-        self.threading.start()
+        self.threading.start
+
+    def new_sub(self):
+    	print("press x to get history")
+    	while True:
+    		new_input = raw_input()
+    		if new_input == "x" or new_input == "X":
+    			@self.zk_object.DataWatch(self.history_node)
+                def watch_node(data, stat, event):
+                    if event == None: #wait for event to be alive and None(stable)
+                        data, stat = self.zk_object.get(self.history_node)
+                        print("new sub")
+                        address = data.split(",")
+                        pub_url = "tcp://127.0.0.1:" + address[1]
+                        self.sub_port = address[1]
+                        self.newSub = True
 
     def history(self, hist_list, index, history, message):
     	if len(hist_list[index]) < history:
