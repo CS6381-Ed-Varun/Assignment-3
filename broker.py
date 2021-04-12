@@ -21,8 +21,17 @@ class broker:
 		self.frontend = self.context.socket(zmq.XPUB)
 		self.backend = self.context.socket(zmq.XSUB)
 
+		self.sub_url = 0
         self.sub_port = 0
         self.newSub = False 
+
+        self.poller = zmq.Poller ()
+        self.poller.register(self.backend ,zmq.POLLIN)
+        self.poller.register(self.frontend, zmq.POLLIN)
+
+        self.topic_q = [] #content queue for tickers
+        self.topic_index = 0
+        self.tickers = [] #list of tickers
 
 		#Connecting to zookeeper - 2181 from config, ip should/can be changed
 		self.zk_object = KazooClient(hosts='127.0.0.1:2181')
@@ -67,8 +76,8 @@ class broker:
 
 		#use port #'s from the leader to finish connecting the proxy'
 		addr = self.leader.split(",") 
-&&&&		self.frontend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
-&&&&		self.backend.bind("tcp://127.0.0.1:" + addr[1])
+		self.frontend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
+		self.backend.bind("tcp://127.0.0.1:" + addr[1])
 
 		#set-up znode for the newly minted leader
 		self.watch_dir = self.path + self.leader 
@@ -84,13 +93,12 @@ class broker:
 		#setting
 		self.zk_object.set(self.leader_node, to_bytes(self.leader)) #setting the port info into the leader znode for pubs + subs
 		self.history_node = '/history/node'
-
-		self.threading = threading.Thread(target=self.background_input)
+		self.threading = threading.Thread(target=self.new_sub)
         self.threading.daemon = True
         self.threading.start
 
     def new_sub(self):
-    	print("press x to get history")
+    	print("press x to send history")
     	while True:
     		new_input = raw_input()
     		if new_input == "x" or new_input == "X":
@@ -100,7 +108,8 @@ class broker:
                         data, stat = self.zk_object.get(self.history_node)
                         print("new sub")
                         address = data.split(",")
-                        pub_url = "tcp://127.0.0.1:" + address[1]
+                        pub_addr = "tcp://127.0.0.1:" + address[1]
+                        self.sub_url = pub_addr
                         self.sub_port = address[1]
                         self.newSub = True
 
@@ -113,11 +122,58 @@ class broker:
     	return hist_list
 
 
-	def device(self):
-		#start the proxy device /broker that forwards messages. same as Assignment 1
-		zmq.device(zmq.FORWARDER, self.frontend, self.backend)
+	def send(self):
+		data = dict(self.poller.poll(5000)) # number = time-out in milliseconds
+		if self.backend in data:
+			string = self.backend.recv()
+			topic, messagedata, strength, history = string.split()
 
-	#essentially start  - watches the leader node and re-elects if it disappears
+		if topic not in self.tickers:
+			self.tickers.append(topic)
+			strength = 0
+			prior_strength = 0
+			count = 0
+			hist_list = []
+			strength_list = []
+			topic_index = 0
+			message = []
+			prior_message = []
+
+			full_data = [strength, prior_strength, count, hist_list. strength_list, topic_index, message, prior_message]
+			self.topic_q.append(full_data)
+			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
+			self.topic_index +=1
+		else:
+			topic_ind = self.tickers.index(topic)
+			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
+
+
+		 if self.newSub: #handling hist for new sub
+                ctx = zmq.Context()
+                pub = ctx.socket(zmq.PUB)
+                pub.bind(self.sub_url)
+                if ownership == max(strength_list):
+                    cur_index = strengh_vec.index(strength)
+                    for i in range(len(hist_list)):
+                        pub.send_multipart (histry_msg[i])
+                        time.sleep(0.1)
+                pub.unbind(self.sub_url)
+                pub.close()
+                ctx.term()
+                general_addr = "tcp://*:" + self.sub_port
+                self.xpubsocket.bind(general_addr)
+                self.newSub = False
+                print("--- Sent HISTORY ---")
+            else:
+                self.frontend.send_multipart(topic_msg) 
+
+        if self.frontend in data: #a subscriber comes here
+            string = self.frontend.recv()
+            self.backend.send_multipart(string)
+
+
+
+	#watch self z-node and re-elect + restart if needed
 	def monitor(self):
 		while True:
 			#creating the watch 
