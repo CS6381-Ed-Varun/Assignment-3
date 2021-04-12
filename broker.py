@@ -96,33 +96,33 @@ class broker:
 		
 		self.threading = threading.Thread(target=self.new_sub)
 		self.threading.daemon = True
-        self.threading.start
+		self.threading.start
 		
 		
 	def new_sub(self):
 		print("press x to send history")
-    	while True:
-    		new_input = raw_input()
-    		if new_input == "x" or new_input == "X":
-    			@self.zk_object.DataWatch(self.history_node)
-                def watch_node(data, stat, event):
-                    if event == None: #wait for event to be alive and None(stable)
-                        data, stat = self.zk_object.get(self.history_node)
-                        print("new sub")
-                        address = data.split(",")
-                        pub_addr = "tcp://127.0.0.1:" + address[1]
-                        self.sub_url = pub_addr
-                        self.sub_port = address[1]
-                        self.newSub = True
+		while True:
+			new_input = raw_input()
+			if new_input == "x" or new_input == "X":
+				@self.zk_object.DataWatch(self.history_node)
+			def watch_node(data, stat, event):
+				if event == None: 
+					data, stat = self.zk_object.get(self.history_node)
+					print("new sub")
+                        		address = data.split(",")
+                        		pub_addr = "tcp://127.0.0.1:" + address[1]
+                        		self.sub_url = pub_addr
+                        		self.sub_port = address[1]
+                        		self.newSub = True
 		
 		
 	def history(self, hist_list, index, history, message):
-    	if len(hist_list[index]) < history:
-    		hist_list.append(message)
-    	else:
-    		hist_list[index].pop(0)
-    		hist_list[index].append(message)
-    	return hist_list
+		if len(hist_list[index]) < history:
+			hist_list.append(message)
+		else:
+			hist_list[index].pop(0)
+			hist_list[index].append(message)
+		return hist_list
 
 
 	def send(self):
