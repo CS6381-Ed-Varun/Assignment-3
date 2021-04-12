@@ -104,16 +104,16 @@ class broker:
 		while True:
 			new_input = raw_input()
 			if new_input == "x" or new_input == "X":
-				@self.zk_object.DataWatch(self.history_node)
-			def watch_node(data, stat, event):
-				if event == None: 
-					data, stat = self.zk_object.get(self.history_node)
-					print("new sub")
-                        		address = data.split(",")
-                        		pub_addr = "tcp://127.0.0.1:" + address[1]
-                        		self.sub_url = pub_addr
-                        		self.sub_port = address[1]
-                        		self.newSub = True
+                @self.zk_object.DataWatch(self.history_node)
+            def watch_node(data, stat, event):
+			    if event == None: 
+				    data, stat = self.zk_object.get(self.history_node)
+				    print("new sub")
+                    address = data.split(",")
+                    pub_addr = "tcp://127.0.0.1:" + address[1]
+                    self.sub_url = pub_addr
+                    self.sub_port = address[1]
+                    self.newSub = True
 		
 		
 	def history(self, hist_list, index, history, message):
@@ -149,9 +149,9 @@ class broker:
 		else:
 			topic_ind = self.tickers.index(topic)
 			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
-
-		 if self.newSub: #handling hist for new sub
-                ctx = zmq.Context()
+            
+        if self.newSub: #handling hist for new sub
+            ctx = zmq.Context()
                 pub = ctx.socket(zmq.PUB)
                 pub.bind(self.sub_url)
                 if ownership == max(strength_list):
@@ -166,16 +166,15 @@ class broker:
                 self.xpubsocket.bind(general_addr)
                 self.newSub = False
                 print("--- Sent HISTORY ---")
-            else:
-                self.frontend.send_multipart(topic_msg) 
+        else:
+            self.frontend.send_multipart(topic_msg) 
 
         if self.frontend in data: #a subscriber comes here
             string = self.frontend.recv()
             self.backend.send_multipart(string)
 
     def schedule(self, info, string):
-    	[strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message] = info
-
+        [strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message] = info
     	num = 20
         content = string
         topic, messagedata, new_strength, history = string.split()
