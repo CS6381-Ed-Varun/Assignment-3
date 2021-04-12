@@ -35,7 +35,7 @@ class subscriber(Thread):
 		if self.port:
 			self.hist_path = "/history/"
 			self.hist_node = self.hist_path + "node"
-			address = self.broker_add + "," + self.port
+			address = self.broker + "," + self.port
 			if self.zk_object.exists(self.hist_node):
 				pass
 			else:
