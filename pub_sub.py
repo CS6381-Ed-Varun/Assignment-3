@@ -50,8 +50,8 @@ class subscriber(Thread):
 			data = str(data) 
 			addr = data.split(",")  #type casting since path is bytes and strings are needed for connect
 			addr[0] = addr[0][2:]   #removing a ' from the byte -> string cast
-			print("tcp://" + self.broker + ":" + addr[1])	
-			self.sub.connect("tcp://" + self.broker + ":" + addr[1]) #connecting to the broker
+			print("tcp://" + self.broker + ":" + addr[0])	
+			self.sub.connect("tcp://" + self.broker + ":" + addr[0]) #connecting to the broker
 	
 		#flooding connection
 		if self.flood == True:
