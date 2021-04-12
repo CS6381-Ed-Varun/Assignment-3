@@ -20,18 +20,18 @@ class broker:
 		self.context = zmq.Context()
 		self.frontend = self.context.socket(zmq.XPUB)
 		self.backend = self.context.socket(zmq.XSUB)
-
+		
 		self.sub_url = 0
-        	self.sub_port = 0
-        	self.newSub = False 
-
-        	self.poller = zmq.Poller ()
-        	self.poller.register(self.backend ,zmq.POLLIN)
-        	self.poller.register(self.frontend, zmq.POLLIN)
-
-        	self.topic_q = [] #content queue for tickers
-        	self.topic_index = 0
-        	self.tickers = [] #list of tickers
+		self.sub_port = 0
+		self.newSub = False 
+		
+		self.poller = zmq.Poller ()
+		self.poller.register(self.backend ,zmq.POLLIN)
+		self.poller.register(self.frontend, zmq.POLLIN)
+		
+		self.topic_q = [] #content queue for tickers
+		self.topic_index = 0
+		self.tickers = [] #list of tickers
 
 		#Connecting to zookeeper - 2181 from config, ip should/can be changed
 		self.zk_object = KazooClient(hosts='127.0.0.1:2181')
@@ -93,12 +93,14 @@ class broker:
 		#setting
 		self.zk_object.set(self.leader_node, to_bytes(self.leader)) #setting the port info into the leader znode for pubs + subs
 		self.history_node = '/history/node'
+		
 		self.threading = threading.Thread(target=self.new_sub)
-        self.threading.daemon = True
+		self.threading.daemon = True
         self.threading.start
-
-    def new_sub(self):
-    	print("press x to send history")
+		
+		
+	def new_sub(self):
+		print("press x to send history")
     	while True:
     		new_input = raw_input()
     		if new_input == "x" or new_input == "X":
@@ -112,8 +114,9 @@ class broker:
                         self.sub_url = pub_addr
                         self.sub_port = address[1]
                         self.newSub = True
-
-    def history(self, hist_list, index, history, message):
+		
+		
+	def history(self, hist_list, index, history, message):
     	if len(hist_list[index]) < history:
     		hist_list.append(message)
     	else:
@@ -146,7 +149,6 @@ class broker:
 		else:
 			topic_ind = self.tickers.index(topic)
 			topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
-
 
 		 if self.newSub: #handling hist for new sub
                 ctx = zmq.Context()
