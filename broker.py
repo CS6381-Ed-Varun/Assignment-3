@@ -76,8 +76,8 @@ class broker:
 
 		#use port #'s from the leader to finish connecting the proxy'
 		addr = self.leader.split(",") 
-		self.frontend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
-		self.backend.bind("tcp://127.0.0.1:" + addr[1])
+		self.backend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
+		self.frontend.bind("tcp://127.0.0.1:" + addr[1])
 
 		#set-up znode for the newly minted leader
 		self.watch_dir = self.path + self.leader 
@@ -116,9 +116,9 @@ class broker:
 						self.newSub = True
 		
 		
-	def history(self, hist_list, index, history, message):
+	def history_(self, hist_list, index, history, message):
 		if len(hist_list[index]) < history:
-			hist_list.append(message)
+			hist_list[index].append(message)
 		else:
 			hist_list[index].pop(0)
 			hist_list[index].append(message)
@@ -129,35 +129,35 @@ class broker:
 		data = dict(self.poller.poll(5000)) # number = time-out in milliseconds
 		if self.backend in data:
 			string = self.backend.recv()
-			topic, messagedata, strength, history = string.split()
+			topic, messagedata, strength, history = string[0].split() #see if it needs index!!
 
 			if topic not in self.tickers:
 				self.tickers.append(topic)
 				strength = 0
 				prior_strength = 0
 				count = 0
-				hist_list = []
+				history_list = []
 				strength_list = []
 				topic_index = 0
 				message = []
 				prior_message = []
 
-				full_data = [strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message]
+				full_data = [strength, prior_strength, count, history_list, strength_list, topic_index, message, prior_message]
 				self.topic_q.append(full_data)
 				topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
 				self.topic_index +=1
 			else:
 				topic_ind = self.tickers.index(topic)
-				topic_msg, hist_list, strength, strength_list = self.schedule(self.topic_q[topic_index], string)
+				topic_msg, history_msg, strength, strength_list = self.schedule(self.topic_q[topic_ind], string)
 
 			if self.newSub: #handling hist for new sub
 				ctx = zmq.Context()
 				pub = ctx.socket(zmq.PUB)
 				pub.bind(self.sub_url)
-				if ownership == max(strength_list):
+				if strength == max(strength_list):
 					cur_index = strength_list.index(strength)
-					for i in range(len(hist_list)):
-						pub.send_multipart (histry_msg[i])
+					for i in range(len(history_msg)):
+						pub.send_string("%s" % (histry_msg[i]))
 						time.sleep(0.1)
 				pub.unbind(self.sub_url)
 				pub.close()
@@ -165,7 +165,7 @@ class broker:
 				general_addr = "tcp://*:" + self.sub_port
 				self.frontend.bind(general_addr)
 				self.newSub = False
-				print("--- Sent HISTORY ---")
+				print("History Sent")
 			else:
 				self.frontend.send_string("%s" % (topic_msg))
 			
@@ -174,19 +174,19 @@ class broker:
 			self.backend.send_string("%s" % (string))
 
 	def schedule(self, info, string):
-		[strength, prior_strength, count, hist_list, strength_list, topic_index, message, prior_message] = info
+		[strength, prior_strength, count, history_list, strength_list, topic_index, message, prior_message] = info
 		num = 20
-		content = string
-		topic, messagedata, new_strength, history = string.split()
-
+		
+		topic, messagedata, new_strength, history = string[0].split() #see about needing index !!
+		
 		if strength not in strength_list:
 			strength_list.append(strength)
-			hist_list.append([])
-			hist_list = self.hist_list(hist_list, topic_index, history, string)
+			history_list.append([])
+			history_list = self.history_(history_list, topic_index, history, string)
 			topic_index += 1 # the actual size of the publishers
 		else:
 			topic_ind = strength_list.index(strength)
-			hist_list = self.hist_list(hist_list, topic_ind, history, string)
+			history_list = self.history_(history_list, topic_ind, history, string)
 			
 		if new_strength > strength:
 			prior_strength = strength
@@ -198,23 +198,22 @@ class broker:
 			message = string
 			count = 0
 		else:
-			count +=1
-			
-		if count >= num:
-			strength = prior_strength
-			message = prior_message
-			count = 0
+			count +=1	
+			if count >= num:
+				strength = prior_strength
+				message = prior_message
+				count = 0
 		info[0] = strength
 		info[1] = prior_strength
 		info[2] = count
-		info[3] = hist_list
+		info[3] = history_list
 		info[4] = strength_list
 		info[5] = topic_index
 		info[6] = prior_message
 		info[7] = message
 		
 		hist_index = strength_list.index(strength)
-		hist_msg = hist_list[hist_index]
+		hist_msg = history_list[hist_index]
 		return message, hist_msg, new_strength, strength_list
 
 	#watch self z-node and re-elect + restart if needed
@@ -222,12 +221,7 @@ class broker:
 		while True:
 			#creating the watch 
 			@self.zk_object.DataWatch(self.watch_dir)
-			def watch_node(data, stat, event):
-				#url's for unbinding before the information is lost
-				addr = self.leader.split(",")
-				front_url = "tcp://127.0.0.1:" + addr[0]
-				back_url = "tcp://127.0.0.1:" + addr[1]
-				
+			def watch_node(data, stat, event):			
 				#re-elect if the znode (and thus by proxy - the broker) dies
 				if event != None:
 					if event.type == "DELETED":
@@ -240,10 +234,10 @@ class broker:
 
 						#unbind + re-bind broker ports to new leader's ports
 						addr = self.leader.split(",")
-						self.frontend.unbind(front_url)
-						self.backend.unbind(back_url)
-						self.frontend.bind("tcp://127.0.0.1:" + addr[0])
-						self.backend.bind("tcp://127.0.0.1:" + addr[1])
+						self.frontend.unbind(self.current_sub)
+						self.backend.unbind(self.current_pub)
+						self.frontend.bind("tcp://127.0.0.1:" + addr[1])
+						self.backend.bind("tcp://127.0.0.1:" + addr[0])
 			# starts broker
 			self.election.run(self.send)
 
