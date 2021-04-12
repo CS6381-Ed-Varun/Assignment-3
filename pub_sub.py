@@ -90,12 +90,13 @@ class subscriber(Thread):
 
 class publisher(Thread):
 
-	def __init__(self, id, flood, topic, broker_add):
+	def __init__(self, id, flood, topic, broker_add, ownership_strength):
 		super().__init__()
 		self.id = id
 		self.flood = flood
 		self.joined = True
 		self.topic = topic
+		self.strength = ownership_strength
 
 		#connect to the lead broker and start zk watch. 
 		self.broker = broker_add
@@ -122,9 +123,9 @@ class publisher(Thread):
 
 	def run(self):
 		print('starting publisher ' + self.topic)
+		history = 20
 		#select a stock
 		while self.joined:
-
 			#set-up the znode watch to see if a broker goes down
 			@self.zk_object.DataWatch(self.path)
 			def watch_node(data, stat, event):
@@ -147,7 +148,7 @@ class publisher(Thread):
 			#generate a random price
 			price = str(random.randrange(20, 60))
 			#send ticker + price to broker
-			self.pub.send_string("%s %s" % (self.topic, price))
+			self.pub.send_string("%s %s %i %i" % (self.topic, price, self.strength, history))
 			time.sleep(1)
 
 	def close(self):
