@@ -44,21 +44,21 @@ class broker:
             pass
         else:
             self.zk_object.ensure_path(self.path)
-            self.zk_object.create(znode1, '5555,5556')
+            self.zk_object.create(znode1, '5555, 5556')
 
         znode2 = self.path + "broker2"
         if self.zk_object.exists(znode2):
             pass
         else:
             self.zk_object.ensure_path(self.path)
-            self.zk_object.create(znode2, '5557,5558')
+            self.zk_object.create(znode2, '5557, 5558')
 
         znode3 = self.path + "broker3"
         if self.zk_object.exists(znode3):
             pass
         else:
             self.zk_object.ensure_path(self.path)
-            self.zk_object.create(znode3, '5553,5554')
+            self.zk_object.create(znode3, '5553, 5554')
 
         self.election = self.zk_object.Election(self.path, "leader")
         leader_list = self.election.contenders()
