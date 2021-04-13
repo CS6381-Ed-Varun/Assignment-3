@@ -23,7 +23,7 @@ $ sudo apt-get install libtool
 ```
 - Zookeeper:
 ```
-$ sudo wget https://downloads.apache.org/zookeeper/stable/apache-zookeeper-3.6.2.tar.gz
+$ sudo wget https://downloads.apache.org/zookeeper/zookeeper-3.6.3/apache-zookeeper-3.6.3-bin.tar.gz
 ```
 - Uncompress: 
 ```
