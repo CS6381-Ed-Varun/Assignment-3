@@ -1,4 +1,3 @@
-
 from kazoo.client import KazooClient
 from kazoo.client import KazooState
 from random import randrange
@@ -11,8 +10,8 @@ import time
 import threading
 import zmq
 
+logging.basicConfig()  # ignore
 
-logging.basicConfig() # ignore
 
 class broker:
 
@@ -20,60 +19,59 @@ class broker:
 
         self.context = zmq.Context()
         self.backend = self.context.socket(zmq.XSUB)
-        self.frontend = self.context.socket (zmq.XPUB)
+        self.frontend = self.context.socket(zmq.XPUB)
         self.frontend.setsockopt(zmq.XPUB_VERBOSE, 1)
         self.frontend.send_multipart([b'\x01', b'10001'])
 
-        self.poller = zmq.Poller ()
-        self.poller.register (self.backend, zmq.POLLIN)
-        self.poller.register (self.frontend, zmq.POLLIN)
+        self.poller = zmq.Poller()
+        self.poller.register(self.backend, zmq.POLLIN)
+        self.poller.register(self.frontend, zmq.POLLIN)
 
         self.sub_url = 0
         self.sub_port = 0
-        self.newSub = False 
+        self.newSub = False
 
-        self.full_data_queue = [] 
+        self.full_data_queue = []
         self.topicInd = 0
-        self.tickers = [] 
+        self.tickers = []
 
-        self.zk_object = KazooClient(hosts='127.0.0.1:2181') 
+        self.zk_object = KazooClient(hosts='127.0.0.1:2181')
         self.zk_object.start()
         self.path = '/home/'
 
         znode1 = self.path + "broker1"
         if self.zk_object.exists(znode1):
             pass
-        else: 
+        else:
             self.zk_object.ensure_path(self.path)
-            self.zk_object.create(znode1, "5555,5556")
-     
+            self.zk_object.create(znode1, '5555,5556')
 
         znode2 = self.path + "broker2"
         if self.zk_object.exists(znode2):
             pass
         else:
             self.zk_object.ensure_path(self.path)
-            self.zk_object.create(znode2, "5557,5558" )
+            self.zk_object.create(znode2, '5557,5558')
 
         znode3 = self.path + "broker3"
         if self.zk_object.exists(znode3):
             pass
         else:
             self.zk_object.ensure_path(self.path)
-            self.zk_object.create(znode3, "5553,5554" )
+            self.zk_object.create(znode3, '5553,5554')
 
-        self.election = self.zk_object.Election(self.path,"leader")
+        self.election = self.zk_object.Election(self.path, "leader")
         leader_list = self.election.contenders()
-        self.leader = leader_list[-1]  
+        self.leader = leader_list[-1]
 
         address = self.leader.split(",")
-        pub_addr = "tcp://*:"+ address[0]
-        sub_addr = "tcp://*:"+ address[1]
+        pub_addr = "tcp://*:" + address[0]
+        sub_addr = "tcp://*:" + address[1]
         print("Current elected broker: ", pub_addr + "," + sub_addr)
         self.backend.bind(pub_addr)
         self.frontend.bind(sub_addr)
 
-        self.watch_dir = self.path + self.leader 
+        self.watch_dir = self.path + self.leader
 
         self.leader_path = "/leader/"
         self.leader_node = self.leader_path + "node"
@@ -81,7 +79,7 @@ class broker:
             pass
         else:
             self.zk_object.ensure_path(self.leader_path)
-            self.zk_object.create(self.leader_node, ephemeral = True)
+            self.zk_object.create(self.leader_node, ephemeral=True)
         self.zk_object.set(self.leader_node, to_bytes(self.leader))
 
         self.history_node = '/history/node'
@@ -94,10 +92,10 @@ class broker:
         print("x key to send history")
         while True:
             addr_input = input()
-            if addr_input =="x":
+            if addr_input == "x":
                 @self.zk_object.DataWatch(self.history_node)
                 def watch_node(data, stat, event):
-                    if event == None: 
+                    if event == None:
                         data, stat = self.zk_object.get(self.history_node)
                         print("Get a new subscriber here")
                         address = data.split(",")
@@ -107,23 +105,23 @@ class broker:
                         self.newSub = True
 
     def history_(self, hist_list, ind, history, msg):
-            if len(hist_list[ind]) < history:
-                hist_list[ind].append(msg)
-            else:
-                hist_list[ind].pop(0)
-                hist_list[ind].append(msg)      
-            return hist_list
+        if len(hist_list[ind]) < history:
+            hist_list[ind].append(msg)
+        else:
+            hist_list[ind].pop(0)
+            hist_list[ind].append(msg)
+        return hist_list
 
     def send(self):
-        events = dict (self.poller.poll (5000)) #number is milliseconds
+        events = dict(self.poller.poll(5000))  # number is milliseconds
         if self.backend in events:
             msg = self.backend.recv_multipart()
             print(msg)
-            content= msg[0]
+            content = msg[0]
             content = str(content)
             topic, price, strength, history, pub_time = content.split(" ")
-            
-            if topic not in self.tickers: 
+
+            if topic not in self.tickers:
                 self.tickers.append(topic)
                 cur_strength = 0
                 prior_strength = 0
@@ -134,16 +132,17 @@ class broker:
                 prior_message = []
                 message = []
 
-                full_data = [cur_strength, prior_strength, count, history_vec, strength_list, topic_index, prior_message, message]
+                full_data = [cur_strength, prior_strength, count, history_vec, strength_list, topic_index,
+                             prior_message, message]
                 self.full_data_queue.append(full_data)
-                #start to collect the msg for the new topic
+                # start to collect the msg for the new topic
                 topic_msg, histry_msg, strength, strength_list = self.schedule(self.full_data_queue[self.topicInd], msg)
-                self.topicInd +=1
-            else :
+                self.topicInd += 1
+            else:
                 topic_ind = self.tickers.index(topic)
                 topic_msg, histry_msg, strength, strength_list = self.schedule(self.full_data_queue[topic_ind], msg)
-        
-            if self.newSub: 
+
+            if self.newSub:
                 ctx = zmq.Context()
                 pub = ctx.socket(zmq.PUB)
                 pub.bind(self.sub_url)
@@ -151,7 +150,7 @@ class broker:
                     curInd = strength_list.index(strength)
                     time.sleep(1)
                     for i in range(len(histry_msg)):
-                        pub.send_multipart (histry_msg[i])
+                        pub.send_multipart(histry_msg[i])
                         time.sleep(0.1)
                 pub.unbind(self.sub_url)
                 pub.close()
@@ -161,9 +160,9 @@ class broker:
                 self.newSub = False
                 print("History sent")
             else:
-                self.frontend.send_multipart (topic_msg) 
+                self.frontend.send_multipart(topic_msg)
 
-        if self.frontend in events: 
+        if self.frontend in events:
             msg = self.frontend.recv_multipart()
             self.backend.send_multipart(msg)
 
@@ -171,7 +170,7 @@ class broker:
         [cur_strength, prior_strength, count, history_vec, strength_list, topic_index, prior_message, message] = info
 
         sample_num = 10
-        content= msg[0]
+        content = msg[0]
         content = str(content)
         topic, price, strength, history, pub_time = content.split(" ")
 
@@ -180,15 +179,15 @@ class broker:
         # creat the history stock for each publisher, should be FIFO
         if strength not in strength_list:
             strength_list.append(strength)
-            #create list for this publisher
+            # create list for this publisher
             history_vec.append([])
             history_vec = self.history_(history_vec, topic_index, history, msg)
-            topic_index += 1 # the actual size of the publishers
+            topic_index += 1  # the actual size of the publishers
         else:
             curInd = strength_list.index(strength)
             history_vec = self.history_(history_vec, curInd, history, msg)
 
-        #get the highest strength msg to register the hash ring, using a heartbeat listener
+        # get the highest strength msg to register the hash ring, using a heartbeat listener
         if strength > cur_strength:
             prior_strength = cur_strength
             cur_strength = strength
@@ -200,11 +199,10 @@ class broker:
             count = 0
         else:
             count = count + 1
-            if count>= sample_num:
+            if count >= sample_num:
                 cur_strength = prior_strength
                 message = prior_message
                 count = 0
-
 
         info[0] = cur_strength
         info[1] = prior_strength
@@ -226,19 +224,19 @@ class broker:
             def watch_node(data, stat, event):
                 if event != None:
                     print(event.type)
-                    if event.type == "DELETED": #redo a election
-                        self.election = self.zk_object.Election(self.path,"leader")
+                    if event.type == "DELETED":  # redo a election
+                        self.election = self.zk_object.Election(self.path, "leader")
                         leader_list = self.election.contenders()
                         self.leader = leader_list[-1].encode('latin-1')
 
                         self.zk_object.set(self.leader_node, self.leader)
-          
+
                         self.backend.unbind(self.current_pub)
                         self.frontend.unbind(self.current_sub)
 
                         address = self.leader.split(",")
-                        pub_addr = "tcp://*:"+ address[0]
-                        sub_addr = "tcp://*:"+ address[1]
+                        pub_addr = "tcp://*:" + address[0]
+                        sub_addr = "tcp://*:" + address[1]
 
                         self.backend.bind(pub_addr)
                         self.frontend.bind(sub_addr)
