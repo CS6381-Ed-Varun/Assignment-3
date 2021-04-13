@@ -1,152 +1,255 @@
 
-import zmq
+from kazoo.client import KazooClient
+from kazoo.client import KazooState
+from random import randrange
+from ansible.module_utils._text import to_bytes
+
+import logging
 import os
 import sys
 import time
 import threading
 import zmq
-from random import randrange
-from ansible.module_utils._text import to_bytes
-from kazoo.client import KazooClient
-from kazoo.client import KazooState
-import logging
 
-logging.basicConfig()
+
+logging.basicConfig() # ignore
 
 class broker:
 
-	def __init__(self):
-		#setting up proxy sockets
-		self.context = zmq.Context()
-		self.frontend = self.context.socket(zmq.XPUB)
-		self.backend = self.context.socket(zmq.XSUB)
+    def __init__(self):
 
+        self.context = zmq.Context()
+        self.backend = self.context.socket(zmq.XSUB)
+        self.frontend = self.context.socket (zmq.XPUB)
+        self.frontend.setsockopt(zmq.XPUB_VERBOSE, 1)
+        self.frontend.send_multipart([b'\x01', b'10001'])
+
+        self.poller = zmq.Poller ()
+        self.poller.register (self.backend, zmq.POLLIN)
+        self.poller.register (self.frontend, zmq.POLLIN)
+
+        self.sub_url = 0
         self.sub_port = 0
         self.newSub = False 
 
-		#Connecting to zookeeper - 2181 from config, ip should/can be changed
-		self.zk_object = KazooClient(hosts='127.0.0.1:2181')
-		self.zk_object.start()
-		self.path = '/home/'
+        self.full_data_queue = [] 
+        self.topicInd = 0
+        self.tickers = [] 
 
-		#creating a znode + path for each broker. We need these for elections and to monitor if it becomes leader
-		node1 = self.path + "broker1"
-		if self.zk_object.exists(node1):
-			pass
-		else:
-			#create the file path since zookeeper is file structured. 
-			self.zk_object.ensure_path(self.path)
-			#create the znode with port info for the pubs + subs to use to find the broker sockets. This is 'data' field used in pub + sub
-			self.zk_object.create(node1, to_bytes("5555,5556"))
+        self.zk_object = KazooClient(hosts='127.0.0.1:2181') 
+        self.zk_object.start()
+        self.path = '/home/'
 
-		#znode2 (same w/ modified port #'s')
-		node2 = self.path + "broker2"
-		if self.zk_object.exists(node2):
-			pass
-		else:
-			#make sure the path exists
-			self.zk_object.ensure_path(self.path)
-			#create the znode with port info for the pubs + subs to use in addr[]
-			self.zk_object.create(node2, to_bytes("5557,5558"))
+        znode1 = self.path + "broker1"
+        if self.zk_object.exists(znode1):
+            pass
+        else: 
+            self.zk_object.ensure_path(self.path)
+            self.zk_object.create(znode1, "5555,5556")
+     
 
-		#znode 3 (same as above 2/ modified ports)
-		node3 = self.path + "broker3"
-		if self.zk_object.exists(node3):
-			pass
-		else:
-			#make sure the path exists
-			self.zk_object.ensure_path(self.path)
-			#create the znode with port info for the pubs + subs to use in addr[]
-			self.zk_object.create(node3, to_bytes("5559,5560"))
+        znode2 = self.path + "broker2"
+        if self.zk_object.exists(znode2):
+            pass
+        else:
+            self.zk_object.ensure_path(self.path)
+            self.zk_object.create(znode2, "5557,5558" )
 
-		#Select a leader for the first time
-		self.election = self.zk_object.Election(self.path, "leader")    #requirements is the '/home/' (self.path) location in hierarchy, named leader
-		potential_leaders = self.election.contenders() #create a list of broker znodes 
-		self.leader = str(potential_leaders[-1]) #always select last one (arbitrary but simple process)
-		print("Leader ports: " + self.leader) 
+        znode3 = self.path + "broker3"
+        if self.zk_object.exists(znode3):
+            pass
+        else:
+            self.zk_object.ensure_path(self.path)
+            self.zk_object.create(znode3, "5553,5554" )
 
-		#use port #'s from the leader to finish connecting the proxy'
-		addr = self.leader.split(",") 
-&&&&		self.frontend.bind("tcp://127.0.0.1:" + addr[0])  #will want to modify ip as usual
-&&&&		self.backend.bind("tcp://127.0.0.1:" + addr[1])
+        self.election = self.zk_object.Election(self.path,"leader")
+        leader_list = self.election.contenders()
+        self.leader = leader_list[-1]  
 
-		#set-up znode for the newly minted leader
-		self.watch_dir = self.path + self.leader 
-		self.leader_path ="/leader/"   
-		self.leader_node = self.leader_path + "node"   #saving the path in zookeeper hierarchy to a var
-		if self.zk_object.exists(self.leader_node):
-			pass
-		#if the path doesn't exist -> make it and populate it with a znode
-		else:
-			self.zk_object.ensure_path(self.leader_path)
-			self.zk_object.create(self.leader_node, ephemeral = True) #ephemeral so it disappears if the broker dies
+        address = self.leader.split(",")
+        pub_addr = "tcp://*:"+ address[0]
+        sub_addr = "tcp://*:"+ address[1]
+        print("Current elected broker: ", pub_addr + "," + sub_addr)
+        self.backend.bind(pub_addr)
+        self.frontend.bind(sub_addr)
 
-		#setting
-		self.zk_object.set(self.leader_node, to_bytes(self.leader)) #setting the port info into the leader znode for pubs + subs
-		self.history_node = '/history/node'
+        self.watch_dir = self.path + self.leader 
 
-		self.threading = threading.Thread(target=self.background_input)
-        self.threading.daemon = True
-        self.threading.start
+        self.leader_path = "/leader/"
+        self.leader_node = self.leader_path + "node"
+        if self.zk_object.exists(self.leader_node):
+            pass
+        else:
+            self.zk_object.ensure_path(self.leader_path)
+            self.zk_object.create(self.leader_node, ephemeral = True)
+        self.zk_object.set(self.leader_node, to_bytes(self.leader))
+
+        self.history_node = '/history/node'
+
+        self.threading1 = threading.Thread(target=self.new_sub)
+        self.threading1.daemon = True
+        self.threading1.start()
 
     def new_sub(self):
-    	print("press x to get history")
-    	while True:
-    		new_input = raw_input()
-    		if new_input == "x" or new_input == "X":
-    			@self.zk_object.DataWatch(self.history_node)
+        print("x key to send history")
+        while True:
+            addr_input = input()
+            if addr_input =="x":
+                @self.zk_object.DataWatch(self.history_node)
                 def watch_node(data, stat, event):
-                    if event == None: #wait for event to be alive and None(stable)
+                    if event == None: 
                         data, stat = self.zk_object.get(self.history_node)
-                        print("new sub")
+                        print("Get a new subscriber here")
                         address = data.split(",")
-                        pub_url = "tcp://127.0.0.1:" + address[1]
+                        pub_url = "tcp://" + address[0] + ":" + address[1]
                         self.sub_port = address[1]
+                        self.sub_url = pub_url
                         self.newSub = True
 
-    def history(self, hist_list, index, history, message):
-    	if len(hist_list[index]) < history:
-    		hist_list.append(message)
-    	else:
-    		hist_list[index].pop(0)
-    		hist_list[index].append(message)
-    	return hist_list
+    def history_(self, hist_list, ind, history, msg):
+            if len(hist_list[ind]) < history:
+                hist_list[ind].append(msg)
+            else:
+                hist_list[ind].pop(0)
+                hist_list[ind].append(msg)      
+            return hist_list
+
+    def send(self):
+        events = dict (self.poller.poll (5000)) #number is milliseconds
+        if self.backend in events:
+            msg = self.backend.recv_multipart()
+            print(msg)
+            content= msg[0]
+            content = str(content)
+            topic, price, strength, history, pub_time = content.split(" ")
+            
+            if topic not in self.tickers: 
+                self.tickers.append(topic)
+                cur_strength = 0
+                prior_strength = 0
+                count = 0
+                history_vec = []
+                strength_list = []
+                topic_index = 0
+                prior_message = []
+                message = []
+
+                full_data = [cur_strength, prior_strength, count, history_vec, strength_list, topic_index, prior_message, message]
+                self.full_data_queue.append(full_data)
+                #start to collect the msg for the new topic
+                topic_msg, histry_msg, strength, strength_list = self.schedule(self.full_data_queue[self.topicInd], msg)
+                self.topicInd +=1
+            else :
+                topic_ind = self.tickers.index(topic)
+                topic_msg, histry_msg, strength, strength_list = self.schedule(self.full_data_queue[topic_ind], msg)
+        
+            if self.newSub: 
+                ctx = zmq.Context()
+                pub = ctx.socket(zmq.PUB)
+                pub.bind(self.sub_url)
+                if strength == max(strength_list):
+                    curInd = strength_list.index(strength)
+                    time.sleep(1)
+                    for i in range(len(histry_msg)):
+                        pub.send_multipart (histry_msg[i])
+                        time.sleep(0.1)
+                pub.unbind(self.sub_url)
+                pub.close()
+                ctx.term()
+                url = "tcp://*:" + self.sub_port
+                self.frontend.bind(url)
+                self.newSub = False
+                print("History sent")
+            else:
+                self.frontend.send_multipart (topic_msg) 
+
+        if self.frontend in events: 
+            msg = self.frontend.recv_multipart()
+            self.backend.send_multipart(msg)
+
+    def schedule(self, info, msg):
+        [cur_strength, prior_strength, count, history_vec, strength_list, topic_index, prior_message, message] = info
+
+        sample_num = 10
+        content= msg[0]
+        content = str(content)
+        topic, price, strength, history, pub_time = content.split(" ")
+
+        strength = int(strength)
+        history = int(history)
+        # creat the history stock for each publisher, should be FIFO
+        if strength not in strength_list:
+            strength_list.append(strength)
+            #create list for this publisher
+            history_vec.append([])
+            history_vec = self.history_(history_vec, topic_index, history, msg)
+            topic_index += 1 # the actual size of the publishers
+        else:
+            curInd = strength_list.index(strength)
+            history_vec = self.history_(history_vec, curInd, history, msg)
+
+        #get the highest strength msg to register the hash ring, using a heartbeat listener
+        if strength > cur_strength:
+            prior_strength = cur_strength
+            cur_strength = strength
+            prior_message = message
+            message = msg
+            count = 0
+        elif strength == cur_strength:
+            message = msg
+            count = 0
+        else:
+            count = count + 1
+            if count>= sample_num:
+                cur_strength = prior_strength
+                message = prior_message
+                count = 0
 
 
-	def device(self):
-		#start the proxy device /broker that forwards messages. same as Assignment 1
-		zmq.device(zmq.FORWARDER, self.frontend, self.backend)
+        info[0] = cur_strength
+        info[1] = prior_strength
+        info[2] = count
+        info[3] = history_vec
+        info[4] = strength_list
+        info[5] = topic_index
+        info[6] = prior_message
+        info[7] = message
 
-	#essentially start  - watches the leader node and re-elects if it disappears
-	def monitor(self):
-		while True:
-			#creating the watch 
-			@self.zk_object.DataWatch(self.watch_dir)
-			def watch_node(data, stat, event):
-				#url's for unbinding before the information is lost
-				addr = self.leader.split(",")
-				front_url = "tcp://127.0.0.1:" + addr[0]
-				back_url = "tcp://127.0.0.1:" + addr[1]
-				
-				#re-elect if the znode (and thus by proxy - the broker) dies
-				if event != None:
-					if event.type == "DELETED":
-						#same election code as above
-						self.election = self.zk_object.Election(self.path, "leader")
-						potential_leaders = self.election.contenders()
-						self.leader = str(potential_leaders[-1]) 
-						#set node with new ports info for pubs + subs
-						self.zk_object.set(self.leader_node, self.leader)
+        histInd = strength_list.index(cur_strength)
+        histry_msg = history_vec[histInd]
 
-						#unbind + re-bind broker ports to new leader's ports
-						addr = self.leader.split(",")
-						self.frontend.unbind(front_url)
-						self.backend.unbind(back_url)
-						self.frontend.bind("tcp://127.0.0.1:" + addr[0])
-						self.backend.bind("tcp://127.0.0.1:" + addr[1])
-			# starts broker
-			self.election.run(self.device)
+        return message, histry_msg, strength, strength_list
 
-if __name__ == "__main__":
+    def monitor(self):
+        while True:
+            @self.zk_object.DataWatch(self.watch_dir)
+            def watch_node(data, stat, event):
+                if event != None:
+                    print(event.type)
+                    if event.type == "DELETED": #redo a election
+                        self.election = self.zk_object.Election(self.path,"leader")
+                        leader_list = self.election.contenders()
+                        self.leader = leader_list[-1].encode('latin-1')
+
+                        self.zk_object.set(self.leader_node, self.leader)
+          
+                        self.backend.unbind(self.current_pub)
+                        self.frontend.unbind(self.current_sub)
+
+                        address = self.leader.split(",")
+                        pub_addr = "tcp://*:"+ address[0]
+                        sub_addr = "tcp://*:"+ address[1]
+
+                        self.backend.bind(pub_addr)
+                        self.frontend.bind(sub_addr)
+
+            self.election.run(self.send)
+
+    def close(self):
+        self.backend.close(0)
+        self.frontend.close(0)
+
+
+if __name__ == '__main__':
     broker = broker()
     broker.monitor()

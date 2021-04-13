@@ -1,7 +1,10 @@
 # CS6381 Assignment 3
 
 ## Overview
-In this assignment we will build upon the middleware from Assignment 2. In order to create a history for new subscribers and ownership strength, we have used Zookeeper to impliment a history and create a more complex broker capable of pairing based on ownership strength and history. 
+In this assignment we will build upon the PUB/SUB middleware from Assignment 2. 
+We support ownership strength for fidelity in publishing and acquisition of recent events through message buffers. 
+With ownership strength, information from only the highest ownership strength publisher gets relayed to the subscriber. 
+As for the the history quality of service, we will require that last N samples of information published on a topic be preserved in a sliding window fashion.
 
 | Simple Broker Latency                                                                                                    | Complex Broker Latency                                                                                                     | Simple Flooding Latency                                                                                                      | Complex Flooding Latency                                                                                                       |
 |--------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
