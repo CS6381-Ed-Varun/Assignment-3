@@ -14,7 +14,6 @@ import zmq
 
 logging.basicConfig() # ignore
 
-zoo = False
 class Subscriber:
     def __init__(self, topic, flood, broker_add, new_port):
         self.broker = broker_add
@@ -37,27 +36,16 @@ class Subscriber:
                 self.zk_object.ensure_path(self.history_path)
                 self.zk_object.create(self.history_node, ephemeral = True)
             self.zk_object.set(self.history_node, send_string)
-            self.connect_str = "tcp://" + self.broker + ":"+ self.port
+            connect_str = "tcp://" + self.broker + ":"+ self.port
+            self.sub.connect(connect_str)
+            self.sub.setsockopt_string(zmq.SUBSCRIBE, self.topic)
+            
+            data, stat = self.zk_object.get(self.path) 
+            data = str(data)
+            address = data.split(",")
+            self.connect_str = "tcp://" + self.broker + ":"+ address[1][:-1]
             self.sub.connect(self.connect_str)
             self.sub.setsockopt_string(zmq.SUBSCRIBE, self.topic)
-            global zoo
-            zoo = True
-        else:
-            @self.zk_object.DataWatch(self.path)
-            def watch_node(data, stat, event):
-                if event == None: 
-                    data, stat = self.zk_object.get(self.path)
-                    global zoo
-                    zoo = True
-            if zoo:  
-                data, stat = self.zk_object.get(self.path) 
-                data = str(data)
-                address = data.split(",")
-                self.connect_str = "tcp://" + self.broker + ":"+ address[1][:-1]
-                self.sub.connect(self.connect_str)
-                self.sub.setsockopt_string(zmq.SUBSCRIBE, self.topic)
-            else:
-                print ("Zookeeper hasn't started")
 
         if self.flood:
             for i in range(1,10):
@@ -101,7 +89,5 @@ if __name__ == '__main__':
     port =  ""
     print ('Starting Subscriber with Topic:',topic)
     sub = Subscriber(topic, False, broker, port)
-
-    if zoo:
-        sub.run()
+    sub.run()
 
