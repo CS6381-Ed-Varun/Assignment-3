@@ -14,8 +14,6 @@ import logging
 logging.basicConfig()
 
 
-zoo = False
-
 class Publisher:
     def __init__(self, topic, flood, broker_add, ownership_strength):
         self.broker = broker_add
@@ -28,23 +26,13 @@ class Publisher:
         self.zk_object = KazooClient(hosts='127.0.0.1:2181') 
         self.zk_object.start()
 
+        data, stat = self.zk_object.get(self.path)
+        data = str(data)
+        address = data.split(",")
+        connect_str = "tcp://" + self.broker + ":"+ address[0][2:]
+        print(connect_str)
+        self.pub.connect(connect_str)
 
-        @self.zk_object.DataWatch(self.path)
-        def watch_node(data, stat, event):
-            if event == None: 
-                data, stat = self.zk_object.get(self.path)
-                global zoo
-                zoo = True
-
-        if zoo: 
-            data, stat = self.zk_object.get(self.path)
-            data = str(data)
-            address = data.split(",")
-            self.connect_str = "tcp://" + self.broker + ":"+ address[0][2:]
-            print(self.connect_str)
-            self.pub.connect(self.connect_str)
-        else:
-            print("Zookeeper hasn't started")
 
     def run(self):
         history = 3
@@ -79,6 +67,5 @@ if __name__ == '__main__':
     broker = "127.0.0.1"
     print ('Starting publisher with topic:',topic )
     pub = Publisher(topic, False, broker, 1)
-    if zoo:
-        pub.run()
+    pub.run()
 
