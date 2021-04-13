@@ -88,7 +88,9 @@ class Subscriber:
             pub_time = float(pub_time)
             time_diff = time.time() - pub_time
             print ("The time difference is: ", time_diff)
-            print (topic + " : " +price)
+            print (topic + " : " + price)
+            with open("./results/latency_{}.csv".format(topic), "a") as f:
+                f.write(str(time_diff) + "\n")
 
     def close(self):
         self.sub.close(0)
