@@ -77,7 +77,7 @@ class Subscriber:
             pub_time = float(pub_time)
             time_diff = time.time() - pub_time
             print ("The time difference is: ", time_diff)
-            print (topic + " : " + price)
+            print (self.topic + " : " + price)
 
             with open ("./Results/latency_{}.csv".format(topic), "a") as f:
                 f.write(str(time_diff) + "\n") 
@@ -89,7 +89,5 @@ if __name__ == '__main__':
     topic = "MSFT"
     broker = "127.0.0.1"
     port =  ""
-    print ('Starting Subscriber with Topic:',topic)
-    sub = Subscriber(topic, False, broker, port)
-    sub.run()
-
+    sub3 = Subscriber("AAPL",False,broker,port)
+    sub3.run()

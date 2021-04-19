@@ -30,9 +30,9 @@ class Publisher:
         data = str(data)
         address = data.split(",")
         connect_str = "tcp://" + self.broker + ":"+ address[0][2:]
-        print(connect_str)
+        print("Pub: " + connect_str +", " + self.topic)
         self.pub.connect(connect_str)
-
+        
 
     def run(self):
         history = 3
@@ -65,7 +65,5 @@ class Publisher:
 if __name__ == '__main__':
     topic = "MSFT"
     broker = "127.0.0.1"
-    print ('Starting publisher with topic:',topic )
-    pub = Publisher(topic, False, broker, 1)
-    pub.run()
-
+    pub4 = Publisher("AAPL",False,broker,1)
+    pub4.run()
