@@ -123,6 +123,56 @@ class broker:
             hist_list[ind].append(msg)
         return hist_list
     #recieving data from pubs + breaking it into useful components for sending
+
+    def schedule(self, info, msg):
+        [cur_strength, prior_strength, count, history_vec, strength_list, topic_index, prior_message, message] = info
+        sample_num = 10 #arbitrary
+        content = msg[0]
+        content = str(content) #cast for split
+        topic, price, strength, history, pub_time = content.split(" ")
+        strength = int(strength)
+        history = int(history)
+        # create the history for each stock
+        if strength not in strength_list:
+            strength_list.append(strength)
+                # create list for this stock/pub
+            history_vec.append([])
+            history_vec = self.history_(history_vec, topic_index, history, msg)
+            topic_index += 1
+        else:
+            curInd = strength_list.index(strength)
+            history_vec = self.history_(history_vec, curInd, history, msg)
+            # strength check to see if pub should take over a given stock's publishing
+        if strength > cur_strength:
+            prior_strength = cur_strength
+            cur_strength = strength
+            prior_message = message
+            message = msg
+            count = 0
+            print("new strongest ownership publisher")
+        elif strength == cur_strength:
+            message = msg
+            count = 0
+        else:
+            count = count + 1
+            if count >= sample_num:
+                cur_strength = prior_strength
+                message = prior_message
+                count = 0
+        info[0] = cur_strength
+        info[1] = prior_strength
+        info[2] = count
+        info[3] = history_vec
+        info[4] = strength_list
+        info[5] = topic_index
+        info[6] = prior_message
+        info[7] = message
+
+        histInd = strength_list.index(cur_strength)
+        histry_msg = history_vec[histInd]
+
+        return message, histry_msg, strength, strength_list
+
     def send(self):
         while self.joined == True:
             events = dict(self.poller.poll(5000))  # number is milliseconds 
@@ -179,55 +229,6 @@ class broker:
                 msg = self.frontend.recv_multipart()
                 self.backend.send_multipart(msg)
 
-    def schedule(self, info, msg):
-        [cur_strength, prior_strength, count, history_vec, strength_list, topic_index, prior_message, message] = info
-        sample_num = 10 #arbitrary
-        content = msg[0]
-        content = str(content) #cast for split
-        topic, price, strength, history, pub_time = content.split(" ")
-        strength = int(strength)
-        history = int(history)
-        # create the history for each stock
-        if strength not in strength_list:
-            strength_list.append(strength)
-                # create list for this stock/pub
-            history_vec.append([])
-            history_vec = self.history_(history_vec, topic_index, history, msg)
-            topic_index += 1
-        else:
-            curInd = strength_list.index(strength)
-            history_vec = self.history_(history_vec, curInd, history, msg)
-            # strength check to see if pub should take over a given stock's publishing
-        if strength > cur_strength:
-            prior_strength = cur_strength
-            cur_strength = strength
-            prior_message = message
-            message = msg
-            count = 0
-            print("new strongest ownership publisher")
-        elif strength == cur_strength:
-            message = msg
-            count = 0
-        else:
-            count = count + 1
-            if count >= sample_num:
-                cur_strength = prior_strength
-                message = prior_message
-                count = 0
-        info[0] = cur_strength
-        info[1] = prior_strength
-        info[2] = count
-        info[3] = history_vec
-        info[4] = strength_list
-        info[5] = topic_index
-        info[6] = prior_message
-        info[7] = message
-
-        histInd = strength_list.index(cur_strength)
-        histry_msg = history_vec[histInd]
-
-        return message, histry_msg, strength, strength_list
-
     def monitor(self):
         while True:
             @self.zk_object.DataWatch(self.watch_dir)
@@ -255,7 +256,6 @@ class broker:
 
     def close(self):
         self.joined = False
-
 
 if __name__ == '__main__':
     broker = broker()
