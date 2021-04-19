@@ -107,13 +107,12 @@ class broker:
                 def watch_node(data, stat, event):
                     if event == None:
                         data, stat = self.zk_object.get(self.history_node)
-                        print("Get a new subscriber here")
+                        print("Sending History")
                         data = str(data)
                         address = data.split(",")
                         pub_url = "tcp://127.0.0.1" + ":" + address[0]
                         self.sub_port = address[0]
                         self.sub_url = pub_url
-                        self.newSub = True
     #creates and maintains history 
     def history_(self, hist_list, ind, history, msg):
         if len(hist_list[ind]) < history:
@@ -198,11 +197,11 @@ class broker:
                                  prior_message, message]
                     self.full_data_queue.append(full_data)
                     # collect the msg for the new topic
-                    topic_msg, histry_msg, strength, strength_list = schedule(self.full_data_queue[self.topicInd], msg)
+                    topic_msg, histry_msg, strength, strength_list = self.schedule(self.full_data_queue[self.topicInd], msg)
                     self.topicInd += 1
                 else:
                     topic_ind = self.tickers.index(topic)
-                    topic_msg, histry_msg, strength, strength_list = schedule(self.full_data_queue[topic_ind], msg)
+                    topic_msg, histry_msg, strength, strength_list = self.schedule(self.full_data_queue[topic_ind], msg)
                 #bind a new pub to a new sub and send it the history
                 if self.newSub:
                     ctx = zmq.Context()
