@@ -38,20 +38,21 @@ class Subscriber:
             self.zk_object.set(self.history_node, send_string)
             connect_str = "tcp://" + self.broker + ":"+ self.port
             self.sub.connect(connect_str)
+            print(connect_str)
             self.sub.setsockopt_string(zmq.SUBSCRIBE, self.topic)
-            
-            data, stat = self.zk_object.get(self.path) 
+        else:
+            data, stat = self.zk_object.get(self.path)
             data = str(data)
             address = data.split(",")
             self.connect_str = "tcp://" + self.broker + ":"+ address[1][:-1]
             self.sub.connect(self.connect_str)
+            print(self.connect_str)
             self.sub.setsockopt_string(zmq.SUBSCRIBE, self.topic)
 
         if self.flood:
             for i in range(1,10):
                 port = str(5558+i)
                 self.sub.connect("tcp://127.0.0.1:" + port)
-
 
     def run(self):
         while True:
